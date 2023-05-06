@@ -13,8 +13,10 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^1.4.0",
+    "chrome-aws-lambda": "^10.1.0",
     "fastify": "^4.17.0",
-    "node-html-to-image": "^3.3.0"
+    "node-html-to-image": "^3.3.0",
+    "puppeteer-core": "^20.1.1"
   },
   "devDependencies": {
     "@types/node": "latest",

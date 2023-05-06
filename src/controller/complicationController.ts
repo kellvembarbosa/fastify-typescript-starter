@@ -1,9 +1,10 @@
 ﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { resolve } from 'path';
 import axios from 'axios';
-import nodeHtmlToImage from 'node-html-to-image';
 import { promises as fs } from 'fs';
-
+import chrome from 'chrome-aws-lambda';
+import puppeteerCore from 'puppeteer-core';
+import nodeHtmlToImage from 'node-html-to-image';
 
 export default async function indexController(fastify: FastifyInstance) {
   // GET /
@@ -26,16 +27,14 @@ export default async function indexController(fastify: FastifyInstance) {
         const imageContent = await fs.readFile(imagePath);
         reply.type('image/png').send(imageContent);
       } else {
-        const url = "https://express-complication.onrender.com/newipe-complication-"+id+".html?width="+width+"&height="+height+"&batteryStatus=30";
+        const url = `https://express-complication.onrender.com/newipe-complication-${id}.html?width=${width}&height=${height}&batteryStatus=30`;
         const response = await axios.get(url);
         const htmlContent = response.data;
 
-        const image = await nodeHtmlToImage({
-          html: htmlContent,
-          output: imagePath,
-          quality: 100,
-          type: 'png',
-        });
+        const image = await generateImage(htmlContent);
+
+        await fs.mkdir(resolve(__dirname, '../../static/images'), { recursive: true });
+        await fs.writeFile(imagePath, image);
 
         reply.type('image/png').send(image);
       }
@@ -45,7 +44,24 @@ export default async function indexController(fastify: FastifyInstance) {
   });
 }
 
+async function generateImage(html: string) {
+  const executablePath = await chrome.executablePath;
+  const args = chrome.args;
+  const headless = chrome.headless;
 
+  const browser = await puppeteerCore.launch({
+    args,
+    executablePath,
+    headless,
+  });
+
+  const page = await browser.newPage();
+  await page.setContent(html);
+  const screenshot = await page.screenshot({ type: 'png' });
+  await browser.close();
+
+  return screenshot;
+}
 
 function getImagePath(id: string, width: string, height: string): string {
   return resolve(__dirname, `../../static/images/id-${id}_w-${width}_h-${height}.png`);
